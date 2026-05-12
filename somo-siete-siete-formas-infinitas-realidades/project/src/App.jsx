@@ -222,6 +222,87 @@ function exportPNG(items, { transparent = false, scale = 2 } = {}) {
   img.src = url;
 }
 
+/* ---------- Random character generator ---------- */
+function generateRandomCharacter(canvasW, canvasH) {
+  const cx = canvasW / 2;
+  const cy = canvasH / 2;
+
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const pickColor = (...exclude) => {
+    const opts = SWATCHES.filter((c) => !exclude.includes(c));
+    return pick(opts.length ? opts : SWATCHES);
+  };
+
+  // Rotated AABB dimensions for a shape
+  const aabbH = (w, kind, rot) => {
+    const def = SHAPES[kind];
+    const h = w * (def.h / def.w);
+    const r = (rot * Math.PI) / 180;
+    return w * Math.abs(Math.sin(r)) + h * Math.abs(Math.cos(r));
+  };
+  const aabbW = (w, kind, rot) => {
+    const def = SHAPES[kind];
+    const h = w * (def.h / def.w);
+    const r = (rot * Math.PI) / 180;
+    return w * Math.abs(Math.cos(r)) + h * Math.abs(Math.sin(r));
+  };
+
+  const ortho = [0, 90, 180, 270];
+
+  // Body — largest, anchored at canvas center
+  const bodyKind  = pick(SHAPE_KEYS);
+  const bodyW     = 160 + Math.round(Math.random() * 60);
+  const bodyColor = pickColor();
+  const bodyRh    = aabbH(bodyW, bodyKind, 0);
+
+  // Head — medium, stacked above body
+  const headKind  = pick(SHAPE_KEYS.filter((k) => k !== bodyKind));
+  const headW     = 90 + Math.round(Math.random() * 50);
+  const headRot   = pick([0, 0, 0, 180]);
+  const headRh    = aabbH(headW, headKind, headRot);
+  const headY     = cy - bodyRh / 2 - SNAP_GAP - headRh / 2;
+  const headColor = pickColor(bodyColor);
+
+  // Feet — medium, stacked below body
+  const feetKind  = pick(SHAPE_KEYS);
+  const feetW     = 80 + Math.round(Math.random() * 60);
+  const feetRot   = pick(ortho);
+  const feetRh    = aabbH(feetW, feetKind, feetRot);
+  const feetY     = cy + bodyRh / 2 + SNAP_GAP + feetRh / 2;
+  const feetColor = pickColor(bodyColor);
+
+  const result = [
+    { id: uid(), kind: bodyKind, x: cx, y: cy,    w: bodyW, rot: 0,       color: bodyColor },
+    { id: uid(), kind: headKind, x: cx, y: headY, w: headW, rot: headRot, color: headColor },
+    { id: uid(), kind: feetKind, x: cx, y: feetY, w: feetW, rot: feetRot, color: feetColor },
+  ];
+
+  // Arms — 0, 1, or 2, flanking the body
+  const numArms = pick([0, 1, 1, 2, 2]);
+  const armW    = 40 + Math.round(Math.random() * 40);
+  const sides   = numArms === 0 ? [] : numArms === 1 ? [pick([-1, 1])] : [-1, 1];
+  for (const side of sides) {
+    const armKind  = pick(SHAPE_KEYS);
+    const armRot   = pick(ortho);
+    const armRwVal = aabbW(armW, armKind, armRot);
+    const armX     = cx + side * (bodyW / 2 + SNAP_GAP + armRwVal / 2);
+    const armY     = cy + (Math.random() - 0.5) * bodyRh * 0.4;
+    result.push({ id: uid(), kind: armKind, x: armX, y: armY, w: armW, rot: armRot, color: pickColor(bodyColor) });
+  }
+
+  // Head accessory — optional small shape on top of head
+  if (Math.random() > 0.35) {
+    const accW    = 28 + Math.round(Math.random() * 32);
+    const accKind = pick(SHAPE_KEYS);
+    const accRot  = pick([0, 45, 90, 135, 180, 225, 270, 315]);
+    const accRh   = aabbH(accW, accKind, accRot);
+    const accY    = headY - headRh / 2 - SNAP_GAP - accRh / 2;
+    result.push({ id: uid(), kind: accKind, x: cx, y: accY, w: accW, rot: accRot, color: pickColor() });
+  }
+
+  return result;
+}
+
 /* ---------- App ---------- */
 function App() {
   const [items, setItems] = useState([]);
@@ -333,6 +414,12 @@ function App() {
     setItems([]);
     setSelectedIds(new Set());
     setShowHint(true);
+  };
+
+  const randomizeCharacter = () => {
+    setItems(generateRandomCharacter(canvasRect.w, canvasRect.h));
+    setSelectedIds(new Set());
+    setShowHint(false);
   };
 
   const selectAll = useCallback(() => {
@@ -598,6 +685,17 @@ function App() {
               </button>
             ))}
           </div>
+          <button className="random-btn" onClick={randomizeCharacter} title="Generar personaje aleatorio">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+              <circle cx="15.5" cy="8.5" r="1.5" fill="currentColor"/>
+              <circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"/>
+              <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+            </svg>
+            <span>Aleatorio</span>
+          </button>
           <div className="palette-hint">
             Toca para añadir<br/>al lienzo
           </div>

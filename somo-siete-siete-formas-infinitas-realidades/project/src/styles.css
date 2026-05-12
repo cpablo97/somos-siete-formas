@@ -199,8 +199,34 @@ input, select, textarea { font-family: inherit; }
   box-shadow: var(--shadow-card);
 }
 .palette-item:active { transform: translateY(0); }
-.palette-hint {
+.random-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
   margin-top: auto;
+  background: var(--yellow);
+  color: var(--ink);
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: 10px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  text-align: center;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+  box-shadow: 0 2px 8px -4px rgba(232, 204, 77, 0.55);
+}
+.random-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -6px rgba(232, 204, 77, 0.75);
+}
+.random-btn:active { transform: translateY(0); }
+
+.palette-hint {
   font-size: 11px;
   line-height: 1.35;
   color: var(--ink-soft);
@@ -208,6 +234,7 @@ input, select, textarea { font-family: inherit; }
   padding: 8px;
   background: rgba(45,44,126,0.04);
   border-radius: 10px;
+  margin-top: 0;
 }
 
 /* ----- Canvas ----- */

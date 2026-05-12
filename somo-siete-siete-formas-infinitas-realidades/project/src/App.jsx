@@ -233,7 +233,6 @@ function generateRandomCharacter(canvasW, canvasH) {
     return pick(opts.length ? opts : SWATCHES);
   };
 
-  // Rotated AABB dimensions for a shape
   const aabbH = (w, kind, rot) => {
     const def = SHAPES[kind];
     const h = w * (def.h / def.w);
@@ -249,58 +248,63 @@ function generateRandomCharacter(canvasW, canvasH) {
 
   const ortho = [0, 90, 180, 270];
 
-  // Body — largest, anchored at canvas center
-  const bodyKind  = pick(SHAPE_KEYS);
+  // Shuffle all 7 shapes and assign one to each role
+  const shuffled = [...SHAPE_KEYS].sort(() => Math.random() - 0.5);
+  const [bodyKind, headKind, leftArmKind, rightArmKind, leftLegKind, rightLegKind, accKind] = shuffled;
+
+  // ---- Body (largest) ----
   const bodyW     = 160 + Math.round(Math.random() * 60);
   const bodyColor = pickColor();
   const bodyRh    = aabbH(bodyW, bodyKind, 0);
 
-  // Head — medium, stacked above body
-  const headKind  = pick(SHAPE_KEYS.filter((k) => k !== bodyKind));
-  const headW     = 90 + Math.round(Math.random() * 50);
-  const headRot   = pick([0, 0, 0, 180]);
-  const headRh    = aabbH(headW, headKind, headRot);
-  const headY     = cy - bodyRh / 2 - SNAP_GAP - headRh / 2;
+  // ---- Head (~55% of body) ----
+  const headW   = Math.round(bodyW * (0.50 + Math.random() * 0.15));
+  const headRot = pick([0, 0, 0, 180]);
+  const headRh  = aabbH(headW, headKind, headRot);
+  const headY   = cy - bodyRh / 2 - SNAP_GAP - headRh / 2;
   const headColor = pickColor(bodyColor);
 
-  // Feet — medium, stacked below body
-  const feetKind  = pick(SHAPE_KEYS);
-  const feetW     = 80 + Math.round(Math.random() * 60);
-  const feetRot   = pick(ortho);
-  const feetRh    = aabbH(feetW, feetKind, feetRot);
-  const feetY     = cy + bodyRh / 2 + SNAP_GAP + feetRh / 2;
-  const feetColor = pickColor(bodyColor);
+  // ---- Head accessory (smallest, ~25% of body) ----
+  const accW   = Math.round(bodyW * (0.20 + Math.random() * 0.12));
+  const accRot = pick([0, 45, 90, 135, 180, 225, 270, 315]);
+  const accRh  = aabbH(accW, accKind, accRot);
+  const accY   = headY - headRh / 2 - SNAP_GAP - accRh / 2;
+  const accColor = pickColor(headColor);
 
-  const result = [
-    { id: uid(), kind: bodyKind, x: cx, y: cy,    w: bodyW, rot: 0,       color: bodyColor },
-    { id: uid(), kind: headKind, x: cx, y: headY, w: headW, rot: headRot, color: headColor },
-    { id: uid(), kind: feetKind, x: cx, y: feetY, w: feetW, rot: feetRot, color: feetColor },
+  // ---- Arms (~38% of body) ----
+  const armW        = Math.round(bodyW * (0.33 + Math.random() * 0.12));
+  const leftArmRot  = pick(ortho);
+  const rightArmRot = pick(ortho);
+  const leftArmRw   = aabbW(armW, leftArmKind, leftArmRot);
+  const rightArmRw  = aabbW(armW, rightArmKind, rightArmRot);
+  const leftArmX    = cx - bodyW / 2 - SNAP_GAP - leftArmRw / 2;
+  const rightArmX   = cx + bodyW / 2 + SNAP_GAP + rightArmRw / 2;
+  const armY        = cy + (Math.random() - 0.5) * bodyRh * 0.3;
+  const leftArmColor  = pickColor(bodyColor);
+  const rightArmColor = pickColor(bodyColor, leftArmColor);
+
+  // ---- Legs (~45% of body) ----
+  const legW        = Math.round(bodyW * (0.40 + Math.random() * 0.12));
+  const leftLegRot  = pick(ortho);
+  const rightLegRot = pick(ortho);
+  const leftLegRh   = aabbH(legW, leftLegKind, leftLegRot);
+  const rightLegRh  = aabbH(legW, rightLegKind, rightLegRot);
+  const leftLegX    = cx - legW * 0.55;
+  const rightLegX   = cx + legW * 0.55;
+  const leftLegY    = cy + bodyRh / 2 + SNAP_GAP + leftLegRh / 2;
+  const rightLegY   = cy + bodyRh / 2 + SNAP_GAP + rightLegRh / 2;
+  const leftLegColor  = pickColor(bodyColor);
+  const rightLegColor = pickColor(bodyColor, leftLegColor);
+
+  return [
+    { id: uid(), kind: bodyKind,     x: cx,        y: cy,        w: bodyW, rot: 0,           color: bodyColor     },
+    { id: uid(), kind: headKind,     x: cx,        y: headY,     w: headW, rot: headRot,      color: headColor     },
+    { id: uid(), kind: accKind,      x: cx,        y: accY,      w: accW,  rot: accRot,       color: accColor      },
+    { id: uid(), kind: leftArmKind,  x: leftArmX,  y: armY,      w: armW,  rot: leftArmRot,   color: leftArmColor  },
+    { id: uid(), kind: rightArmKind, x: rightArmX, y: armY,      w: armW,  rot: rightArmRot,  color: rightArmColor },
+    { id: uid(), kind: leftLegKind,  x: leftLegX,  y: leftLegY,  w: legW,  rot: leftLegRot,   color: leftLegColor  },
+    { id: uid(), kind: rightLegKind, x: rightLegX, y: rightLegY, w: legW,  rot: rightLegRot,  color: rightLegColor },
   ];
-
-  // Arms — 0, 1, or 2, flanking the body
-  const numArms = pick([0, 1, 1, 2, 2]);
-  const armW    = 40 + Math.round(Math.random() * 40);
-  const sides   = numArms === 0 ? [] : numArms === 1 ? [pick([-1, 1])] : [-1, 1];
-  for (const side of sides) {
-    const armKind  = pick(SHAPE_KEYS);
-    const armRot   = pick(ortho);
-    const armRwVal = aabbW(armW, armKind, armRot);
-    const armX     = cx + side * (bodyW / 2 + SNAP_GAP + armRwVal / 2);
-    const armY     = cy + (Math.random() - 0.5) * bodyRh * 0.4;
-    result.push({ id: uid(), kind: armKind, x: armX, y: armY, w: armW, rot: armRot, color: pickColor(bodyColor) });
-  }
-
-  // Head accessory — optional small shape on top of head
-  if (Math.random() > 0.35) {
-    const accW    = 28 + Math.round(Math.random() * 32);
-    const accKind = pick(SHAPE_KEYS);
-    const accRot  = pick([0, 45, 90, 135, 180, 225, 270, 315]);
-    const accRh   = aabbH(accW, accKind, accRot);
-    const accY    = headY - headRh / 2 - SNAP_GAP - accRh / 2;
-    result.push({ id: uid(), kind: accKind, x: cx, y: accY, w: accW, rot: accRot, color: pickColor() });
-  }
-
-  return result;
 }
 
 /* ---------- App ---------- */

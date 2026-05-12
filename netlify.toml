@@ -1,0 +1,4 @@
+[build]
+  base    = "somo-siete-siete-formas-infinitas-realidades/project"
+  command = "npm run build"
+  publish = "dist"
